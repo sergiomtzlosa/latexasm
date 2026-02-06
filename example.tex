@@ -42,38 +42,35 @@
     \Label{ATOILOOP}
     \Instr{CMP}[R2][R1]
     \Instr{JZ}[ATOIEND]
-    
     \Instr{GETCH}[R3][INPUT][R2] % ASCII value
     \Instr{SUB}[R3][48]          % Minus '0'
-    
     \Instr{MUL}[R0][10]
     \Instr{ADD}[R0][R3]
-    
     \Instr{ADD}[R2][1]
     \Instr{JMP}[ATOILOOP]
     \Label{ATOIEND}
     \Instr{HALT}
 \end{latexasm}
 \textbf{Result of atoi("123"):}
-\begin{latexasm}
+\begin{latexasm}%
     % Re-run to print result
-    \Instr{DATA}[INPUT][123]
-    \Instr{STRLEN}[R1][INPUT]
-    \Instr{MOV}[R0][0]
-    \Instr{MOV}[R2][0]
-    \Label{ATOILOOP2}
-    \Instr{CMP}[R2][R1]
-    \Instr{JZ}[ATOIEND2]
-    \Instr{GETCH}[R3][INPUT][R2]
-    \Instr{SUB}[R3][48]
-    \Instr{MUL}[R0][10]
-    \Instr{ADD}[R0][R3]
-    \Instr{ADD}[R2][1]
-    \Instr{JMP}[ATOILOOP2]
-    \Label{ATOIEND2}
-    \Instr{PRINT}[R0]
-    \Instr{HALT}
-\end{latexasm}
+    \Instr{DATA}[INPUT][123]%
+    \Instr{STRLEN}[R1][INPUT]%
+    \Instr{MOV}[R0][0]%
+    \Instr{MOV}[R2][0]%
+    \Label{ATOILOOP2}%
+    \Instr{CMP}[R2][R1]%
+    \Instr{JZ}[ATOIEND2]%
+    \Instr{GETCH}[R3][INPUT][R2]%
+    \Instr{SUB}[R3][48]%
+    \Instr{MUL}[R0][10]%
+    \Instr{ADD}[R0][R3]%
+    \Instr{ADD}[R2][1]%
+    \Instr{JMP}[ATOILOOP2]%
+    \Label{ATOIEND2}%
+    \Instr{PRINT}[R0]%
+    \Instr{HALT}%
+\end{latexasm}%
 
 \subsection*{4. Kitchen Sink (All Instructions)}
 \begin{latexasm}
