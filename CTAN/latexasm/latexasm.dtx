@@ -1,0 +1,356 @@
+% \iffalse meta-comment
+%
+% Copyright (C) 2026 by Sergio Martinez-Losa
+%
+% This file may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in:
+%
+%    http://www.latex-project.org/lppl.txt
+%
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% \fi
+%
+% \iffalse
+%<*driver>
+\ProvidesFile{latexasm.dtx}
+%</driver>
+%<package>\RequirePackage{expl3}
+%<package>\ProvidesExplPackage{latexasm}{2026/02/06}{0.1}{LaTeX Assembly Language VM}
+%
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage{latexasm}
+\usepackage{hyperref}
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\begin{document}
+  \DocInput{latexasm.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% \CheckSum{0}
+%
+% \CharacterTable
+%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%   Digits        \0\1\2\3\4\5\6\7\8\9
+%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%   Dollar        \$     Percent       \%     Ampersand     \&
+%   Acute accent  \'     Left paren    \(     Right paren   \)
+%   Asterisk      \*     Plus          \+     Comma         \,
+%   Minus         \-     Point         \.     Solidus       \/
+%   Colon         \:     Semicolon     \;     Less than     \<
+%   Equals        \=     Greater than  \>     Question mark \?
+%   Commercial at \@     Left bracket  \[     Backslash     \\
+%   Right bracket \]     Circumflex    \^     Underscore    \_
+%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%   Right brace   \}     Tilde         \~}
+%
+%
+% \changes{v0.1}{2026/02/06}{Initial version}
+%
+% \GetFileInfo{latexasm.dtx}
+%
+% \DoNotIndex{\newcommand,\newenvironment}
+%
+% \title{The \textsf{latexasm} package\thanks{This document
+%   corresponds to \textsf{latexasm}~\fileversion, dated \filedate.}}
+% \author{Sergio Martinez-Losa}
+%
+% \maketitle
+%
+% \section{Introduction}
+%
+% The \textsf{latexasm} package implements a virtual machine (VM) within \LaTeX{} 
+% using \texttt{expl3} that executes assembly-like code. This allows you to write 
+% programs with registers, arithmetic operations, control flow, and string manipulation 
+% directly in your \LaTeX{} documents.
+%
+% \section{Usage}
+%
+% \subsection{Basic Example}
+%
+% \begin{verbatim}
+% \usepackage{latexasm}
+%
+% \begin{latexasm}
+%     \Instr{MOV}[R0][5]
+%     \Label{LOOP}
+%     \Instr{PRINT}[R0]
+%     \Instr{SUB}[R0][1]
+%     \Instr{CMP}[R0][0]
+%     \Instr{JNZ}[LOOP]
+%     \Instr{HALT}
+% \end{latexasm}
+% \end{verbatim}
+%
+% \subsection{Registers}
+%
+% The VM provides 8 general-purpose registers: \texttt{R0}, \texttt{R1}, \texttt{R2}, 
+% \texttt{R3}, \texttt{R4}, \texttt{R5}, \texttt{R6}, and \texttt{R7}.
+%
+% \subsection{Instructions}
+%
+% \begin{description}
+% \item[\texttt{MOV dest, src}] Move value from \texttt{src} to \texttt{dest}
+% \item[\texttt{ADD dest, src}] Add \texttt{src} to \texttt{dest}
+% \item[\texttt{SUB dest, src}] Subtract \texttt{src} from \texttt{dest}
+% \item[\texttt{MUL dest, src}] Multiply \texttt{dest} by \texttt{src}
+% \item[\texttt{DIV dest, src}] Divide \texttt{dest} by \texttt{src}
+% \item[\texttt{MOD dest, src}] Modulo \texttt{dest} by \texttt{src}
+% \item[\texttt{CMP a, b}] Compare \texttt{a} and \texttt{b}, set flags
+% \item[\texttt{JMP label}] Unconditional jump to \texttt{label}
+% \item[\texttt{JZ label}] Jump to \texttt{label} if zero flag is set
+% \item[\texttt{JNZ label}] Jump to \texttt{label} if zero flag is not set
+% \item[\texttt{PRINT src}] Print numeric value to PDF
+% \item[\texttt{CHR src}] Print ASCII character to PDF
+% \item[\texttt{DATA label, value}] Define named string or constant
+% \item[\texttt{STRLEN dest, label}] Get length of string
+% \item[\texttt{GETCH dest, label, index}] Get ASCII value of character
+% \item[\texttt{HALT}] Stop execution
+% \end{description}
+%
+% \subsection{Examples}
+%
+% See the included \texttt{example.tex} file for complete examples including:
+% countdown loops, Hello World, atoi implementation, and comprehensive instruction usage.
+%
+% \StopEventually{}
+%
+% \section{Implementation}
+%
+% \iffalse
+%<*package>
+% \fi
+%
+%    \begin{macrocode}
+\RequirePackage{xparse}
+
+% --- Registers ---
+\prop_new:N \g_latexasm_registers_prop
+\int_new:N \g_latexasm_pc_int
+
+% --- Flags ---
+\bool_new:N \g_latexasm_z_flag_bool
+\bool_new:N \g_latexasm_n_flag_bool
+\bool_new:N \g_latexasm_halt_bool
+
+% --- Memory and Data ---
+\prop_new:N \g_latexasm_memory_prop
+\prop_new:N \g_latexasm_labels_prop
+\seq_new:N \g_latexasm_code_seq
+
+% --- Internal Variables ---
+\tl_new:N \l_latexasm_tmp_tl
+\int_new:N \l_latexasm_tmp_int
+
+% --- API ---
+
+\NewDocumentEnvironment{latexasm}{}
+  {
+    \seq_gclear:N \g_latexasm_code_seq
+    \prop_gclear:N \g_latexasm_labels_prop
+    \prop_gclear:N \g_latexasm_registers_prop
+    % Initialize registers R0-R7
+    \clist_map_inline:nn { R0, R1, R2, R3, R4, R5, R6, R7 }
+      { \prop_gput:Nnn \g_latexasm_registers_prop { ##1 } { 0 } }
+    \int_gset:Nn \g_latexasm_pc_int { 0 }
+    \bool_gset_false:N \g_latexasm_halt_bool
+  }
+  {
+    \latexasm_run:
+  }
+
+\cs_new_protected:Npn \latexasm_run:
+  {
+    \bool_until_do:nn { \g_latexasm_halt_bool }
+      {
+        \latexasm_step:
+      }
+  }
+
+\cs_new_protected:Npn \latexasm_step:
+  {
+    \int_gincr:N \g_latexasm_pc_int
+    \l_latexasm_tmp_int = \int_use:N \g_latexasm_pc_int
+    \tl_set:Nx \l_latexasm_tmp_tl { \seq_item:Nn \g_latexasm_code_seq { \l_latexasm_tmp_int } }
+    
+    \tl_if_empty:NTF \l_latexasm_tmp_tl
+      { \bool_gset_true:N \g_latexasm_halt_bool }
+      { \latexasm_dispatch:V \l_latexasm_tmp_tl }
+  }
+
+\cs_new_protected:Npn \latexasm_dispatch:n #1
+  {
+    % Very simple dispatcher for now
+    % Format: \cmd {arg1} {arg2} ...
+    #1
+  }
+\cs_generate_variant:Nn \latexasm_dispatch:n { V }
+
+% --- Instructions ---
+
+\cs_new_protected:Npn \L_HALT
+  { \bool_gset_true:N \g_latexasm_halt_bool }
+
+\cs_new_protected:Npn \L_MOV #1 #2
+  {
+    \latexasm_set_val:nn { #1 } { \latexasm_get_val:n { #2 } }
+  }
+
+\cs_new_protected:Npn \L_ADD #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } + \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_SUB #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } - \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_CMP #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } - \latexasm_get_val:n { #2 } }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_MUL #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } * \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_DIV #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } / \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_MOD #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \int_mod:nn { \latexasm_get_val:n { #1 } } { \latexasm_get_val:n { #2 } } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_JMP #1
+  {
+    \prop_get:NnNTF \g_latexasm_labels_prop { #1 } \l_latexasm_tmp_tl
+      { \int_gset:Nn \g_latexasm_pc_int { \l_latexasm_tmp_tl - 1 } }
+      { \msg_error:nnn { latexasm } { unknown-label } { #1 } }
+  }
+
+\cs_new_protected:Npn \L_JZ #1
+  {
+    \bool_if:NT \g_latexasm_z_flag_bool { \L_JMP { #1 } }
+  }
+
+\cs_new_protected:Npn \L_JNZ #1
+  {
+    \bool_if:NF \g_latexasm_z_flag_bool { \L_JMP { #1 } }
+  }
+
+\cs_new_protected:Npn \L_PRINT #1
+  {
+    \mode_leave_vertical:
+    \latexasm_get_val:n { #1 } \space
+  }
+
+\cs_new_protected:Npn \L_CHR #1
+  {
+    \mode_leave_vertical:
+    \char\latexasm_get_val:n { #1 }
+  }
+
+\cs_new_protected:Npn \L_DATA #1 #2
+  {
+    \prop_gput:Nnn \g_latexasm_memory_prop { #1 } { #2 }
+  }
+
+\cs_new_protected:Npn \L_STRLEN #1 #2
+  {
+    \prop_get:NnNTF \g_latexasm_memory_prop { #2 } \l_latexasm_tmp_tl
+      { \latexasm_set_val:nn { #1 } { \str_count:N \l_latexasm_tmp_tl } }
+      { \latexasm_set_val:nn { #1 } { 0 } }
+  }
+
+\cs_new_protected:Npn \L_GETCH #1 #2 #3
+  {
+    \prop_get:NnNTF \g_latexasm_memory_prop { #2 } \l_latexasm_tmp_tl
+      {
+        \tl_set:Nx \l_latexasm_tmp_tl { \str_item:Nn \l_latexasm_tmp_tl { \latexasm_get_val:n { #3 } + 1 } }
+        \latexasm_set_val:nn { #1 } { \exp_after:wN ` \l_latexasm_tmp_tl }
+      }
+      { \latexasm_set_val:nn { #1 } { 0 } }
+  }
+
+% --- Helpers ---
+
+\cs_new:Npn \latexasm_get_val:n #1
+  {
+    \prop_if_in:NnTF \g_latexasm_registers_prop { #1 }
+      { \prop_item:Nn \g_latexasm_registers_prop { #1 } }
+      { #1 }
+  }
+
+\cs_new_protected:Npn \latexasm_set_val:nn #1 #2
+  {
+    \prop_gput:Nnx \g_latexasm_registers_prop { #1 } { \int_eval:n { #2 } }
+  }
+
+\cs_new_protected:Npn \latexasm_update_flags:n #1
+  {
+    \int_compare:nNnTF { #1 } = { 0 }
+      { \bool_gset_true:N \g_latexasm_z_flag_bool }
+      { \bool_gset_false:N \g_latexasm_z_flag_bool }
+      
+    \int_compare:nNnTF { #1 } < { 0 }
+      { \bool_gset_true:N \g_latexasm_n_flag_bool }
+      { \bool_gset_false:N \g_latexasm_n_flag_bool }
+  }
+
+% --- Syntax Sugar ---
+
+\NewDocumentCommand{\Instr}{ m o o o }
+  {
+    \IfNoValueTF { #2 }
+      { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } } }
+      {
+        \IfNoValueTF { #3 }
+          { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } { #2 } } }
+          {
+            \IfNoValueTF { #4 }
+              { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } { #2 } { #3 } } }
+              { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } { #2 } { #3 } { #4 } } }
+          }
+      }
+  }
+
+\NewDocumentCommand{\Label}{ m }
+  {
+    \prop_gput:Nnx \g_latexasm_labels_prop { #1 } { \int_eval:n { \seq_count:N \g_latexasm_code_seq + 1 } }
+  }
+
+\msg_new:nnnn { latexasm } { unknown-label }
+  { Unknown ~ label ~ '#1'. }
+  { Check ~ your ~ label ~ definitions. }
+
+%    \end{macrocode}
+% \iffalse
+%</package>
+% \fi
+%
+% \Finale
+\endinput

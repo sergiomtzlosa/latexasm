@@ -1,0 +1,236 @@
+%%
+%% This is file `latexasm.sty',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% latexasm.dtx  (with options: `package')
+%% 
+%% This is a generated file.
+%% 
+%% Copyright (C) 2026 by Sergio Martinez-Losa
+%% 
+%% This file may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either version 1.3
+%% of this license or (at your option) any later version.
+%% The latest version of this license is in:
+%% 
+%%    http://www.latex-project.org/lppl.txt
+%% 
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 2005/12/01 or later.
+%% 
+\RequirePackage{expl3}
+\ProvidesExplPackage{latexasm}{2026/02/06}{0.1}{LaTeX Assembly Language VM}
+\RequirePackage{xparse}
+
+\prop_new:N \g_latexasm_registers_prop
+\int_new:N \g_latexasm_pc_int
+
+\bool_new:N \g_latexasm_z_flag_bool
+\bool_new:N \g_latexasm_n_flag_bool
+\bool_new:N \g_latexasm_halt_bool
+
+\prop_new:N \g_latexasm_memory_prop
+\prop_new:N \g_latexasm_labels_prop
+\seq_new:N \g_latexasm_code_seq
+
+\tl_new:N \l_latexasm_tmp_tl
+\int_new:N \l_latexasm_tmp_int
+
+
+\NewDocumentEnvironment{latexasm}{}
+  {
+    \seq_gclear:N \g_latexasm_code_seq
+    \prop_gclear:N \g_latexasm_labels_prop
+    \prop_gclear:N \g_latexasm_registers_prop
+    % Initialize registers R0-R7
+    \clist_map_inline:nn { R0, R1, R2, R3, R4, R5, R6, R7 }
+      { \prop_gput:Nnn \g_latexasm_registers_prop { ##1 } { 0 } }
+    \int_gset:Nn \g_latexasm_pc_int { 0 }
+    \bool_gset_false:N \g_latexasm_halt_bool
+  }
+  {
+    \latexasm_run:
+  }
+
+\cs_new_protected:Npn \latexasm_run:
+  {
+    \bool_until_do:nn { \g_latexasm_halt_bool }
+      {
+        \latexasm_step:
+      }
+  }
+
+\cs_new_protected:Npn \latexasm_step:
+  {
+    \int_gincr:N \g_latexasm_pc_int
+    \l_latexasm_tmp_int = \int_use:N \g_latexasm_pc_int
+    \tl_set:Nx \l_latexasm_tmp_tl { \seq_item:Nn \g_latexasm_code_seq { \l_latexasm_tmp_int } }
+
+    \tl_if_empty:NTF \l_latexasm_tmp_tl
+      { \bool_gset_true:N \g_latexasm_halt_bool }
+      { \latexasm_dispatch:V \l_latexasm_tmp_tl }
+  }
+
+\cs_new_protected:Npn \latexasm_dispatch:n #1
+  {
+    % Very simple dispatcher for now
+    % Format: \cmd {arg1} {arg2} ...
+    #1
+  }
+\cs_generate_variant:Nn \latexasm_dispatch:n { V }
+
+
+\cs_new_protected:Npn \L_HALT
+  { \bool_gset_true:N \g_latexasm_halt_bool }
+
+\cs_new_protected:Npn \L_MOV #1 #2
+  {
+    \latexasm_set_val:nn { #1 } { \latexasm_get_val:n { #2 } }
+  }
+
+\cs_new_protected:Npn \L_ADD #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } + \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_SUB #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } - \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_CMP #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } - \latexasm_get_val:n { #2 } }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_MUL #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } * \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_DIV #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \latexasm_get_val:n { #1 } / \latexasm_get_val:n { #2 } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_MOD #1 #2
+  {
+    \int_set:Nn \l_latexasm_tmp_int { \int_mod:nn { \latexasm_get_val:n { #1 } } { \latexasm_get_val:n { #2 } } }
+    \latexasm_set_val:nn { #1 } { \int_use:N \l_latexasm_tmp_int }
+    \latexasm_update_flags:n { \l_latexasm_tmp_int }
+  }
+
+\cs_new_protected:Npn \L_JMP #1
+  {
+    \prop_get:NnNTF \g_latexasm_labels_prop { #1 } \l_latexasm_tmp_tl
+      { \int_gset:Nn \g_latexasm_pc_int { \l_latexasm_tmp_tl - 1 } }
+      { \msg_error:nnn { latexasm } { unknown-label } { #1 } }
+  }
+
+\cs_new_protected:Npn \L_JZ #1
+  {
+    \bool_if:NT \g_latexasm_z_flag_bool { \L_JMP { #1 } }
+  }
+
+\cs_new_protected:Npn \L_JNZ #1
+  {
+    \bool_if:NF \g_latexasm_z_flag_bool { \L_JMP { #1 } }
+  }
+
+\cs_new_protected:Npn \L_PRINT #1
+  {
+    \mode_leave_vertical:
+    \latexasm_get_val:n { #1 } \space
+  }
+
+\cs_new_protected:Npn \L_CHR #1
+  {
+    \mode_leave_vertical:
+    \char\latexasm_get_val:n { #1 }
+  }
+
+\cs_new_protected:Npn \L_DATA #1 #2
+  {
+    \prop_gput:Nnn \g_latexasm_memory_prop { #1 } { #2 }
+  }
+
+\cs_new_protected:Npn \L_STRLEN #1 #2
+  {
+    \prop_get:NnNTF \g_latexasm_memory_prop { #2 } \l_latexasm_tmp_tl
+      { \latexasm_set_val:nn { #1 } { \str_count:N \l_latexasm_tmp_tl } }
+      { \latexasm_set_val:nn { #1 } { 0 } }
+  }
+
+\cs_new_protected:Npn \L_GETCH #1 #2 #3
+  {
+    \prop_get:NnNTF \g_latexasm_memory_prop { #2 } \l_latexasm_tmp_tl
+      {
+        \tl_set:Nx \l_latexasm_tmp_tl { \str_item:Nn \l_latexasm_tmp_tl { \latexasm_get_val:n { #3 } + 1 } }
+        \latexasm_set_val:nn { #1 } { \exp_after:wN ` \l_latexasm_tmp_tl }
+      }
+      { \latexasm_set_val:nn { #1 } { 0 } }
+  }
+
+
+\cs_new:Npn \latexasm_get_val:n #1
+  {
+    \prop_if_in:NnTF \g_latexasm_registers_prop { #1 }
+      { \prop_item:Nn \g_latexasm_registers_prop { #1 } }
+      { #1 }
+  }
+
+\cs_new_protected:Npn \latexasm_set_val:nn #1 #2
+  {
+    \prop_gput:Nnx \g_latexasm_registers_prop { #1 } { \int_eval:n { #2 } }
+  }
+
+\cs_new_protected:Npn \latexasm_update_flags:n #1
+  {
+    \int_compare:nNnTF { #1 } = { 0 }
+      { \bool_gset_true:N \g_latexasm_z_flag_bool }
+      { \bool_gset_false:N \g_latexasm_z_flag_bool }
+
+    \int_compare:nNnTF { #1 } < { 0 }
+      { \bool_gset_true:N \g_latexasm_n_flag_bool }
+      { \bool_gset_false:N \g_latexasm_n_flag_bool }
+  }
+
+
+\NewDocumentCommand{\Instr}{ m o o o }
+  {
+    \IfNoValueTF { #2 }
+      { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } } }
+      {
+        \IfNoValueTF { #3 }
+          { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } { #2 } } }
+          {
+            \IfNoValueTF { #4 }
+              { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } { #2 } { #3 } } }
+              { \seq_gput_right:Nn \g_latexasm_code_seq { \use:c { L_#1 } { #2 } { #3 } { #4 } } }
+          }
+      }
+  }
+
+\NewDocumentCommand{\Label}{ m }
+  {
+    \prop_gput:Nnx \g_latexasm_labels_prop { #1 } { \int_eval:n { \seq_count:N \g_latexasm_code_seq + 1 } }
+  }
+
+\msg_new:nnnn { latexasm } { unknown-label }
+  { Unknown ~ label ~ '#1'. }
+  { Check ~ your ~ label ~ definitions. }
+
+\endinput
+%%
+%% End of file `latexasm.sty'.

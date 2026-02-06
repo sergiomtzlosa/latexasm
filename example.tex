@@ -1,0 +1,96 @@
+\documentclass{article}
+\usepackage{latexasm}
+
+\begin{document}
+
+\section*{LaTeX Assembly Examples}
+
+\subsection*{1. Counter: 10 to 0}
+\begin{latexasm}
+    \Instr{MOV}[R0][10]
+    \Label{COUNTDOWN}
+    \Instr{PRINT}[R0]
+    \Instr{SUB}[R0][1]
+    \Instr{CMP}[R0][-1]
+    \Instr{JNZ}[COUNTDOWN]
+    \Instr{HALT}
+\end{latexasm}
+
+\subsection*{2. Hello World}
+\begin{latexasm}
+    \Instr{DATA}[MSG][Hello, ~ World!]
+    \Instr{STRLEN}[R1][MSG]
+    \Instr{MOV}[R0][0]
+    \Label{HELLOLOOP}
+    \Instr{CMP}[R0][R1]
+    \Instr{JZ}[HELLOEND]
+    \Instr{GETCH}[R2][MSG][R0]
+    \Instr{CHR}[R2]
+    \Instr{ADD}[R0][1]
+    \Instr{JMP}[HELLOLOOP]
+    \Label{HELLOEND}
+    \Instr{HALT}
+\end{latexasm}
+
+\subsection*{3. atoi (ascii to integer)}
+% Input: "123", Output: R0
+\begin{latexasm}
+    \Instr{DATA}[INPUT][123]
+    \Instr{STRLEN}[R1][INPUT]
+    \Instr{MOV}[R0][0] % Result
+    \Instr{MOV}[R2][0] % Index
+    \Label{ATOILOOP}
+    \Instr{CMP}[R2][R1]
+    \Instr{JZ}[ATOIEND]
+    
+    \Instr{GETCH}[R3][INPUT][R2] % ASCII value
+    \Instr{SUB}[R3][48]          % Minus '0'
+    
+    \Instr{MUL}[R0][10]
+    \Instr{ADD}[R0][R3]
+    
+    \Instr{ADD}[R2][1]
+    \Instr{JMP}[ATOILOOP]
+    \Label{ATOIEND}
+    \Instr{HALT}
+\end{latexasm}
+\textbf{Result of atoi("123"):}
+\begin{latexasm}
+    % Re-run to print result
+    \Instr{DATA}[INPUT][123]
+    \Instr{STRLEN}[R1][INPUT]
+    \Instr{MOV}[R0][0]
+    \Instr{MOV}[R2][0]
+    \Label{ATOILOOP2}
+    \Instr{CMP}[R2][R1]
+    \Instr{JZ}[ATOIEND2]
+    \Instr{GETCH}[R3][INPUT][R2]
+    \Instr{SUB}[R3][48]
+    \Instr{MUL}[R0][10]
+    \Instr{ADD}[R0][R3]
+    \Instr{ADD}[R2][1]
+    \Instr{JMP}[ATOILOOP2]
+    \Label{ATOIEND2}
+    \Instr{PRINT}[R0]
+    \Instr{HALT}
+\end{latexasm}
+
+\subsection*{4. Kitchen Sink (All Instructions)}
+\begin{latexasm}
+    \Instr{DATA}[TEXT][Testing]
+    \Instr{MOV}[R0][100]
+    \Instr{MOV}[R1][30]
+    \Instr{ADD}[R0][R1]      % 130
+    \Instr{SUB}[R0][10]      % 120
+    \Instr{MUL}[R0][2]       % 240
+    \Instr{DIV}[R0][4]       % 60
+    \Instr{MOD}[R0][7]       % 4
+    \Instr{PRINT}[R0]        % Should print 4
+    \Instr{STRLEN}[R2][TEXT] % 7
+    \Instr{PRINT}[R2]        % Should print 7
+    \Instr{GETCH}[R3][TEXT][0]% 'T' = 84
+    \Instr{CHR}[R3]           % Should print T
+    \Instr{HALT}
+\end{latexasm}
+
+\end{document}
