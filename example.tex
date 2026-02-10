@@ -34,23 +34,6 @@
 
 \subsection*{3. atoi (ascii to integer)}
 % Input: "123", Output: R0
-\begin{latexasm}
-    \Instr{DATA}[INPUT][123]
-    \Instr{STRLEN}[R1][INPUT]
-    \Instr{MOV}[R0][0] % Result
-    \Instr{MOV}[R2][0] % Index
-    \Label{ATOILOOP}
-    \Instr{CMP}[R2][R1]
-    \Instr{JZ}[ATOIEND]
-    \Instr{GETCH}[R3][INPUT][R2] % ASCII value
-    \Instr{SUB}[R3][48]          % Minus '0'
-    \Instr{MUL}[R0][10]
-    \Instr{ADD}[R0][R3]
-    \Instr{ADD}[R2][1]
-    \Instr{JMP}[ATOILOOP]
-    \Label{ATOIEND}
-    \Instr{HALT}
-\end{latexasm}
 \textbf{Result of atoi("123"):}
 \begin{latexasm}%
     % Re-run to print result
